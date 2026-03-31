@@ -22,6 +22,7 @@ interface Stats {
   losses: number
   winRate: number
   totalPnl: number
+  totalRoi: number
   avgWin: number
   avgLoss: number
   maxWin: number
@@ -31,6 +32,7 @@ interface Stats {
 export default function Home() {
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
+  const [fixing, setFixing] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [trades, setTrades] = useState<Trade[]>([])
   const [stats, setStats] = useState<Stats | null>(null)
@@ -81,6 +83,28 @@ export default function Home() {
     }
   }
 
+  const handleFixAll = async () => {
+    setFixing(true)
+    try {
+      const res = await fetch('/api/trades', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fixAll: true })
+      })
+      const data = await res.json()
+      if (res.ok) {
+        setMessage({ type: 'success', text: data.message })
+        setRefreshKey(k => k + 1)
+      } else {
+        setMessage({ type: 'error', text: data.error })
+      }
+    } catch {
+      setMessage({ type: 'error', text: '修复失败' })
+    } finally {
+      setFixing(false)
+    }
+  }
+
   const handleDelete = async (id: number) => {
     try {
       await fetch(`/api/trades?id=${id}`, { method: 'DELETE' })
@@ -88,6 +112,13 @@ export default function Home() {
     } catch (error) {
       console.error('Failed to delete:', error)
     }
+  }
+
+  const calculateRoi = (trade: Trade) => {
+    const pnl = parseFloat(trade.pnl)
+    const capital = parseFloat(trade.capital)
+    if (capital === 0) return 0
+    return (pnl / capital) * 100
   }
 
   return (
@@ -134,7 +165,16 @@ export default function Home() {
 
         {stats && (
           <div className="mb-10">
-            <h2 className="text-xl font-semibold mb-4 text-slate-300">数据概览</h2>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-slate-300">数据概览</h2>
+              <button
+                onClick={handleFixAll}
+                disabled={fixing}
+                className="text-xs bg-amber-500/20 border border-amber-500/30 text-amber-400 px-3 py-1 rounded-lg hover:bg-amber-500/30 transition-colors disabled:opacity-50"
+              >
+                {fixing ? '修复中...' : '🔧 修复历史数据'}
+              </button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
               <StatCard 
                 label="总交易" 
@@ -157,11 +197,11 @@ export default function Home() {
                 color={stats.totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}
               />
               <StatCard 
-                label="最大单笔" 
-                value={`${stats.maxWin >= 0 ? '+' : ''}${stats.maxWin.toFixed(2)}U`} 
-                icon="🚀"
-                gradient="from-orange-500/20 to-orange-600/10 border-orange-500/30"
-                color={stats.maxWin >= 0 ? 'text-green-400' : 'text-red-400'}
+                label="总回报率" 
+                value={`${stats.totalRoi >= 0 ? '+' : ''}${stats.totalRoi.toFixed(2)}%`} 
+                icon="📈"
+                gradient={stats.totalRoi >= 0 ? 'from-emerald-500/20 to-emerald-600/10 border-emerald-500/30' : 'from-rose-500/20 to-rose-600/10 border-rose-500/30'}
+                color={stats.totalRoi >= 0 ? 'text-emerald-400' : 'text-rose-400'}
               />
             </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
@@ -220,11 +260,14 @@ export default function Home() {
                     <th className="text-center py-3 px-3 font-medium">杠杆</th>
                     <th className="text-right py-3 px-3 font-medium">本金</th>
                     <th className="text-right py-3 px-3 font-medium">盈亏</th>
+                    <th className="text-right py-3 px-3 font-medium">回报率</th>
                     <th className="text-center py-3 px-3 font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {trades.map((trade) => (
+                  {trades.map((trade) => {
+                    const roi = calculateRoi(trade)
+                    return (
                     <tr key={trade.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
                       <td className="py-3 px-3 text-slate-400 text-xs">{new Date(trade.created_at).toLocaleString('zh-CN')}</td>
                       <td className="py-3 px-3 font-semibold">{trade.symbol}</td>
@@ -243,6 +286,9 @@ export default function Home() {
                       <td className={`py-3 px-3 text-right font-bold font-mono ${parseFloat(trade.pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {parseFloat(trade.pnl) >= 0 ? '+' : ''}{parseFloat(trade.pnl).toFixed(2)}U
                       </td>
+                      <td className={`py-3 px-3 text-right font-bold font-mono ${roi >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {roi >= 0 ? '+' : ''}{roi.toFixed(2)}%
+                      </td>
                       <td className="py-3 px-3 text-center">
                         <button 
                           onClick={() => handleDelete(trade.id)} 
@@ -252,7 +298,7 @@ export default function Home() {
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  )})}
                 </tbody>
               </table>
             </div>
