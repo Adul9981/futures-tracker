@@ -1,36 +1,65 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 合约交易统计工具
 
-## Getting Started
+加密合约交易记录统计工具，支持手动输入交易信息，自动解析并计算盈亏。
 
-First, run the development server:
+## 功能
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- 手动输入交易记录，自动解析（币种、方向、价格、杠杆、本金）
+- 自动计算盈亏
+- 交易统计（胜率、总盈亏、平均盈亏等）
+- 交易记录列表
+
+## 部署步骤
+
+### 1. 创建 Neon 数据库
+
+1. 访问 [Neon](https://neon.tech) 注册账号
+2. 创建新项目，获取连接字符串
+3. 连接字符串格式：`postgresql://username:password@host/database?sslmode=require`
+
+### 2. 部署到 Vercel
+
+1. Fork 或上传代码到 GitHub
+2. 在 Vercel 导入项目
+3. 添加环境变量：
+   - `DATABASE_URL`: Neon 数据库连接字符串
+4. 部署
+
+### 3. 初始化数据库
+
+部署完成后，访问以下 URL 初始化数据库表：
+
+```
+https://你的域名/api/init
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 本地开发
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+# 复制环境变量示例
+cp .env.local.example .env.local
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+# 编辑 .env.local，填入 DATABASE_URL
 
-## Learn More
+# 安装依赖
+npm install
 
-To learn more about Next.js, take a look at the following resources:
+# 启动开发服务器
+npm run dev
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 输入格式
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```
+ETH 2075空 2085止损 2035止盈 90倍 本金15U 止盈
+```
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+解析字段：
+- 币种：ETH
+- 方向：空（空/多）
+- 开仓价：2075
+- 止损价：2085
+- 止盈价：2035
+- 杠杆：90倍
+- 本金：15U
+- 结果：止盈（止盈/止损）
