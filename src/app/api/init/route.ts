@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { sql } from '@/lib/db'
 
-export async function POST() {
+async function initTable() {
   if (!sql) {
     return NextResponse.json({ error: '数据库未配置' }, { status: 500 })
   }
@@ -27,4 +27,12 @@ export async function POST() {
     console.error('Error initializing database:', error)
     return NextResponse.json({ error: '数据库初始化失败' }, { status: 500 })
   }
+}
+
+export async function GET() {
+  return initTable()
+}
+
+export async function POST() {
+  return initTable()
 }
