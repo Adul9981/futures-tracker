@@ -91,88 +91,165 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-zinc-900 text-zinc-100 p-4 md:p-8">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-2xl font-bold mb-8 text-center">合约交易统计</h1>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
+      <div className="max-w-6xl mx-auto p-4 md:p-8">
+        <header className="text-center mb-10">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">
+            合约交易统计
+          </h1>
+          <p className="text-slate-400">记录每一笔交易，分析你的盈亏</p>
+        </header>
 
-        <form onSubmit={handleSubmit} className="mb-8">
-          <div className="bg-zinc-800 rounded-lg p-4">
+        <form onSubmit={handleSubmit} className="mb-10">
+          <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center gap-2 mb-4">
+              <div className="w-3 h-3 rounded-full bg-red-500"></div>
+              <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+              <div className="w-3 h-3 rounded-full bg-green-500"></div>
+              <span className="ml-2 text-slate-400 text-sm">输入交易记录</span>
+            </div>
             <textarea
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="输入交易记录，如：ETH 2075空 2085止损 2035止盈 90倍 本金15U 止盈"
-              className="w-full h-24 bg-zinc-700 rounded-lg p-3 text-white placeholder-zinc-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
+              className="w-full h-28 bg-slate-900/50 rounded-xl p-4 text-white placeholder-slate-500 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/50 border border-slate-700 font-mono text-sm"
             />
-            <div className="flex justify-between items-center mt-3">
-              <span className="text-zinc-500 text-sm">格式示例：币种 价格方向 开仓价 止损价 止盈价 杠杆 本金 结果</span>
+            <div className="flex justify-between items-center mt-4">
+              <span className="text-slate-500 text-xs">支持多种格式：ETH 2075空 止损2085 止盈2035 90倍</span>
               <button
                 type="submit"
                 disabled={loading}
-                className="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-medium disabled:opacity-50"
+                className="bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 px-8 py-3 rounded-xl font-medium transition-all disabled:opacity-50 shadow-lg shadow-blue-500/25"
               >
                 {loading ? '提交中...' : '添加记录'}
               </button>
             </div>
           </div>
           {message && (
-            <div className={`mt-3 p-3 rounded-lg ${message.type === 'success' ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>
+            <div className={`mt-4 p-4 rounded-xl ${message.type === 'success' ? 'bg-green-500/20 border border-green-500/30 text-green-400' : 'bg-red-500/20 border border-red-500/30 text-red-400'}`}>
               {message.text}
             </div>
           )}
         </form>
 
         {stats && (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-            <StatCard label="总交易" value={stats.total} />
-            <StatCard label="胜率" value={`${stats.winRate}%`} />
-            <StatCard label="总盈亏" value={`${stats.totalPnl >= 0 ? '+' : ''}${stats.totalPnl}U`} color={stats.totalPnl >= 0 ? 'text-green-400' : 'text-red-400'} />
-            <StatCard label="最大单笔" value={`${stats.maxWin >= 0 ? '+' : ''}${stats.maxWin}U`} color={stats.maxWin >= 0 ? 'text-green-400' : 'text-red-400'} />
-            <StatCard label="盈利次数" value={stats.wins} color="text-green-400" />
-            <StatCard label="亏损次数" value={stats.losses} color="text-red-400" />
-            <StatCard label="平均盈利" value={`+${stats.avgWin}U`} color="text-green-400" />
-            <StatCard label="平均亏损" value={`${stats.avgLoss}U`} color="text-red-400" />
+          <div className="mb-10">
+            <h2 className="text-xl font-semibold mb-4 text-slate-300">数据概览</h2>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <StatCard 
+                label="总交易" 
+                value={stats.total} 
+                icon="📊"
+                gradient="from-blue-500/20 to-blue-600/10 border-blue-500/30"
+              />
+              <StatCard 
+                label="胜率" 
+                value={`${stats.winRate}%`} 
+                icon="🎯"
+                gradient="from-purple-500/20 to-purple-600/10 border-purple-500/30"
+                color={stats.winRate >= 50 ? 'text-green-400' : 'text-red-400'}
+              />
+              <StatCard 
+                label="总盈亏" 
+                value={`${stats.totalPnl >= 0 ? '+' : ''}${stats.totalPnl.toFixed(2)}U`} 
+                icon={stats.totalPnl >= 0 ? '💰' : '💸'}
+                gradient={stats.totalPnl >= 0 ? 'from-green-500/20 to-green-600/10 border-green-500/30' : 'from-red-500/20 to-red-600/10 border-red-500/30'}
+                color={stats.totalPnl >= 0 ? 'text-green-400' : 'text-red-400'}
+              />
+              <StatCard 
+                label="最大单笔" 
+                value={`${stats.maxWin >= 0 ? '+' : ''}${stats.maxWin.toFixed(2)}U`} 
+                icon="🚀"
+                gradient="from-orange-500/20 to-orange-600/10 border-orange-500/30"
+                color={stats.maxWin >= 0 ? 'text-green-400' : 'text-red-400'}
+              />
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mt-4">
+              <StatCard 
+                label="盈利次数" 
+                value={stats.wins} 
+                icon="✅"
+                gradient="from-emerald-500/20 to-emerald-600/10 border-emerald-500/30"
+                color="text-emerald-400"
+              />
+              <StatCard 
+                label="亏损次数" 
+                value={stats.losses} 
+                icon="❌"
+                gradient="from-rose-500/20 to-rose-600/10 border-rose-500/30"
+                color="text-rose-400"
+              />
+              <StatCard 
+                label="平均盈利" 
+                value={`+${stats.avgWin.toFixed(2)}U`} 
+                icon="📈"
+                gradient="from-green-500/20 to-green-600/10 border-green-500/30"
+                color="text-green-400"
+              />
+              <StatCard 
+                label="平均亏损" 
+                value={`${stats.avgLoss.toFixed(2)}U`} 
+                icon="📉"
+                gradient="from-red-500/20 to-red-600/10 border-red-500/30"
+                color="text-red-400"
+              />
+            </div>
           </div>
         )}
 
-        <div className="bg-zinc-800 rounded-lg p-4">
-          <h2 className="text-lg font-semibold mb-4">交易记录</h2>
+        <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700 rounded-2xl p-6 shadow-xl">
+          <h2 className="text-xl font-semibold mb-6 text-slate-300 flex items-center gap-2">
+            <span>📋</span> 交易记录
+          </h2>
           {trades.length === 0 ? (
-            <p className="text-zinc-500 text-center py-8">暂无交易记录</p>
+            <div className="text-center py-16">
+              <div className="text-6xl mb-4">📝</div>
+              <p className="text-slate-500">暂无交易记录，开始记录你的第一笔交易吧</p>
+            </div>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="text-zinc-400 border-b border-zinc-700">
-                    <th className="text-left py-2 px-2">时间</th>
-                    <th className="text-left py-2 px-2">币种</th>
-                    <th className="text-left py-2 px-2">方向</th>
-                    <th className="text-right py-2 px-2">开仓价</th>
-                    <th className="text-right py-2 px-2">止盈</th>
-                    <th className="text-right py-2 px-2">止损</th>
-                    <th className="text-right py-2 px-2">杠杆</th>
-                    <th className="text-right py-2 px-2">本金</th>
-                    <th className="text-right py-2 px-2">盈亏</th>
-                    <th className="text-center py-2 px-2">操作</th>
+                  <tr className="text-slate-400 border-b border-slate-700">
+                    <th className="text-left py-3 px-3 font-medium">时间</th>
+                    <th className="text-left py-3 px-3 font-medium">币种</th>
+                    <th className="text-center py-3 px-3 font-medium">方向</th>
+                    <th className="text-right py-3 px-3 font-medium">开仓价</th>
+                    <th className="text-right py-3 px-3 font-medium">止盈</th>
+                    <th className="text-right py-3 px-3 font-medium">止损</th>
+                    <th className="text-center py-3 px-3 font-medium">杠杆</th>
+                    <th className="text-right py-3 px-3 font-medium">本金</th>
+                    <th className="text-right py-3 px-3 font-medium">盈亏</th>
+                    <th className="text-center py-3 px-3 font-medium">操作</th>
                   </tr>
                 </thead>
                 <tbody>
                   {trades.map((trade) => (
-                    <tr key={trade.id} className="border-b border-zinc-700/50 hover:bg-zinc-700/50">
-                      <td className="py-2 px-2 text-zinc-400">{new Date(trade.created_at).toLocaleString('zh-CN')}</td>
-                      <td className="py-2 px-2 font-medium">{trade.symbol}</td>
-                      <td className={`py-2 px-2 ${trade.direction === 'long' ? 'text-red-400' : 'text-green-400'}`}>
-                        {trade.direction === 'long' ? '多' : '空'}
+                    <tr key={trade.id} className="border-b border-slate-700/50 hover:bg-slate-700/30 transition-colors">
+                      <td className="py-3 px-3 text-slate-400 text-xs">{new Date(trade.created_at).toLocaleString('zh-CN')}</td>
+                      <td className="py-3 px-3 font-semibold">{trade.symbol}</td>
+                      <td className="py-3 px-3 text-center">
+                        <span className={`inline-block px-3 py-1 rounded-full text-xs font-medium ${trade.direction === 'long' ? 'bg-red-500/20 text-red-400 border border-red-500/30' : 'bg-green-500/20 text-green-400 border border-green-500/30'}`}>
+                          {trade.direction === 'long' ? '多' : '空'}
+                        </span>
                       </td>
-                      <td className="py-2 px-2 text-right">{trade.entry_price}</td>
-                      <td className="py-2 px-2 text-right text-green-400">{trade.take_profit}</td>
-                      <td className="py-2 px-2 text-right text-red-400">{trade.stop_loss}</td>
-                      <td className="py-2 px-2 text-right">{trade.leverage}x</td>
-                      <td className="py-2 px-2 text-right">{trade.capital}U</td>
-                      <td className={`py-2 px-2 text-right font-medium ${parseFloat(trade.pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {parseFloat(trade.pnl) >= 0 ? '+' : ''}{trade.pnl}U
+                      <td className="py-3 px-3 text-right font-mono">{trade.entry_price}</td>
+                      <td className="py-3 px-3 text-right font-mono text-green-400">{trade.take_profit}</td>
+                      <td className="py-3 px-3 text-right font-mono text-red-400">{trade.stop_loss}</td>
+                      <td className="py-3 px-3 text-center">
+                        <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs">{trade.leverage}x</span>
                       </td>
-                      <td className="py-2 px-2 text-center">
-                        <button onClick={() => handleDelete(trade.id)} className="text-zinc-500 hover:text-red-400">删除</button>
+                      <td className="py-3 px-3 text-right font-mono text-slate-300">{trade.capital}U</td>
+                      <td className={`py-3 px-3 text-right font-bold font-mono ${parseFloat(trade.pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                        {parseFloat(trade.pnl) >= 0 ? '+' : ''}{parseFloat(trade.pnl).toFixed(2)}U
+                      </td>
+                      <td className="py-3 px-3 text-center">
+                        <button 
+                          onClick={() => handleDelete(trade.id)} 
+                          className="text-slate-500 hover:text-red-400 transition-colors text-xs"
+                        >
+                          删除
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -181,15 +258,22 @@ export default function Home() {
             </div>
           )}
         </div>
+
+        <footer className="text-center mt-10 text-slate-500 text-sm">
+          合约交易统计工具 · 数据仅供参考
+        </footer>
       </div>
     </div>
   )
 }
 
-function StatCard({ label, value, color = 'text-white' }: { label: string; value: string | number; color?: string }) {
+function StatCard({ label, value, icon, gradient, color = 'text-white' }: { label: string; value: string | number; icon: string; gradient: string; color?: string }) {
   return (
-    <div className="bg-zinc-800 rounded-lg p-4">
-      <div className="text-zinc-400 text-sm mb-1">{label}</div>
+    <div className={`bg-gradient-to-br ${gradient} rounded-xl p-5 border backdrop-blur-sm`}>
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-lg">{icon}</span>
+        <span className="text-slate-400 text-sm">{label}</span>
+      </div>
       <div className={`text-2xl font-bold ${color}`}>{value}</div>
     </div>
   )

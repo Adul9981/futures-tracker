@@ -13,9 +13,6 @@ interface ParsedTrade {
 export function parseTrade(input: string): ParsedTrade | null {
   const text = input.toLowerCase().trim()
   
-  const allNumbers = text.match(/(\d+(?:\.\d+)?)/g) || []
-  const numbers = allNumbers.map(n => parseFloat(n))
-  
   let symbol = ''
   const symbolMatch = text.match(/([a-z]{2,10})/i)
   if (symbolMatch) {
@@ -26,57 +23,67 @@ export function parseTrade(input: string): ParsedTrade | null {
   
   const direction = text.includes('空') ? 'short' : 'long'
   
-  let entryPrice = 0
-  let stopLoss = 0
-  let takeProfit = 0
+  let leverage = 10
+  const leverageMatch = text.match(/(?:杠杆|倍|leverage)\s*[：:]*\s*(\d+)/i) || text.match(/(\d+)\s*(?:倍|x|×|leverage)/i)
+  if (leverageMatch) {
+    leverage = parseInt(leverageMatch[1])
+  }
   
-  const entryMatch = text.match(/(?:开仓价?|开(?:多|空)|开(?=[a-z]))[\s:：]*(\d+(?:\.\d+)?)/i)
+  let capital = 10
+  const capitalMatch = text.match(/(?:本金|保证金)\s*[：:]*\s*(\d+(?:\.\d+)?)/i) || text.match(/(\d+(?:\.\d+)?)\s*(?:u|usdt)/i)
+  if (capitalMatch) {
+    capital = parseFloat(capitalMatch[1])
+  }
+  
+  let entryPrice = 0
+  const entryMatch = text.match(/(?:开仓价?|开(?:多|空)|价格|价)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
   if (entryMatch) {
     entryPrice = parseFloat(entryMatch[1])
   }
   
-  const slMatch = text.match(/(?:止损|sl)[\s:：]*(\d+(?:\.\d+)?)/i)
+  let stopLoss = 0
+  const slMatch = text.match(/(?:止损|sl)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
   if (slMatch) {
     stopLoss = parseFloat(slMatch[1])
   }
   
-  const tpMatch = text.match(/(?:止盈|tp)[\s:：]*(\d+(?:\.\d+)?)/i)
+  let takeProfit = 0
+  const tpMatch = text.match(/(?:止盈|tp)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
   if (tpMatch) {
     takeProfit = parseFloat(tpMatch[1])
   }
   
-  if (entryPrice === 0 && numbers.length >= 1) {
+  const allNumbers = text.match(/(\d+(?:\.\d+)?)/g) || []
+  
+  if (entryPrice === 0) {
     const symbolIndex = text.indexOf(symbol.toLowerCase())
-    const afterSymbol = text.slice(symbolIndex + symbol.length)
-    const firstNumMatch = afterSymbol.match(/(\d+(?:\.\d+)?)/)
-    if (firstNumMatch) {
-      entryPrice = parseFloat(firstNumMatch[1])
+    const afterSymbol = text.slice(symbolIndex + symbol.length).replace(/[^\d.]/g, ' ')
+    const numMatch = afterSymbol.trim().match(/^(\d+(?:\.\d+)?)/)
+    if (numMatch) {
+      entryPrice = parseFloat(numMatch[1])
     }
   }
   
-  if (stopLoss === 0 && numbers.length >= 2) {
-    const remaining = allNumbers.filter(n => parseFloat(n) !== entryPrice)
-    if (remaining.length >= 1) {
+  const usedPrices = [entryPrice]
+  
+  if (stopLoss === 0) {
+    const remaining = allNumbers.filter(n => !usedPrices.includes(parseFloat(n)))
+    if (remaining.length > 0) {
       stopLoss = parseFloat(remaining[0])
+      usedPrices.push(stopLoss)
     }
   }
   
-  if (takeProfit === 0 && numbers.length >= 3) {
-    const remaining = allNumbers.filter(n => parseFloat(n) !== entryPrice && parseFloat(n) !== stopLoss)
-    if (remaining.length >= 1) {
+  if (takeProfit === 0) {
+    const remaining = allNumbers.filter(n => !usedPrices.includes(parseFloat(n)))
+    if (remaining.length > 0) {
       takeProfit = parseFloat(remaining[0])
     }
   }
   
   if (entryPrice === 0) return null
   
-  const leverageMatch = text.match(/(\d+(?:\.\d+)?)\s*(?:倍|x|×)/)
-  const leverage = leverageMatch ? parseFloat(leverageMatch[1]) : 10
-  
-  const capitalMatch = text.match(/(?:本金|保证金|开)\s*(\d+(?:\.\d+)?)/i) || text.match(/(\d+(?:\.\d+)?)\s*(?:u|usdt)/i)
-  const capital = capitalMatch ? parseFloat(capitalMatch[1]) : 10
-  
-  const result = text.includes('止盈') || text.includes('tp') ? 'win' : 'loss'
+  const result = text.includes('止盈') || text.includes('tp') || text.includes('已止盈') ? 'win' : 'loss'
   
   const exitPrice = result === 'win' ? takeProfit : stopLoss
   const pnl = calculatePnl(direction, entryPrice, exitPrice, capital, leverage)
