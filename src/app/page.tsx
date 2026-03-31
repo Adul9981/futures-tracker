@@ -121,6 +121,10 @@ export default function Home() {
     return (pnl / capital) * 100
   }
 
+  const formatPrice = (price: string | number) => {
+    return Math.round(parseFloat(String(price)))
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="max-w-6xl mx-auto p-4 md:p-8">
@@ -276,9 +280,9 @@ export default function Home() {
                           {trade.direction === 'long' ? '多' : '空'}
                         </span>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono">{trade.entry_price}</td>
-                      <td className="py-3 px-3 text-right font-mono text-green-400">{trade.take_profit}</td>
-                      <td className="py-3 px-3 text-right font-mono text-red-400">{trade.stop_loss}</td>
+                      <td className="py-3 px-3 text-right font-mono">{formatPrice(trade.entry_price)}</td>
+                      <td className="py-3 px-3 text-right font-mono text-green-400">{formatPrice(trade.take_profit)}</td>
+                      <td className="py-3 px-3 text-right font-mono text-red-400">{formatPrice(trade.stop_loss)}</td>
                       <td className="py-3 px-3 text-center">
                         <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs">{trade.leverage}x</span>
                       </td>
