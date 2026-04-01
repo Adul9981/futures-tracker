@@ -145,10 +145,10 @@ export default function Home() {
               <circle cx="18" cy="9" r="2" fill="currentColor"/>
             </svg>
           </div>
-          <h1 className="text-4xl md:text-5xl font-bold bg-gradient-to-r from-white via-blue-100 to-slate-400 bg-clip-text text-transparent mb-3">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-white via-blue-100 to-slate-400 bg-clip-text text-transparent mb-3">
             合约交易统计
           </h1>
-          <p className="text-slate-400 text-lg">记录每一笔交易，分析你的盈亏情况</p>
+          <p className="text-slate-500">记录每一笔交易，分析你的盈亏情况</p>
         </header>
 
         <form onSubmit={handleSubmit} className="mb-12">
