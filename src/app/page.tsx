@@ -125,6 +125,15 @@ export default function Home() {
     return Math.round(parseFloat(String(price)))
   }
 
+  const formatCapital = (capital: string | number) => {
+    return Math.round(parseFloat(String(capital)))
+  }
+
+  const formatPnl = (pnl: string | number) => {
+    const val = parseFloat(String(pnl))
+    return val >= 0 ? `+${val.toFixed(2)}` : val.toFixed(2)
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white">
       <div className="max-w-6xl mx-auto p-4 md:p-8">
@@ -286,9 +295,9 @@ export default function Home() {
                       <td className="py-3 px-3 text-center">
                         <span className="bg-purple-500/20 text-purple-400 px-2 py-1 rounded text-xs">{trade.leverage}x</span>
                       </td>
-                      <td className="py-3 px-3 text-right font-mono text-slate-300">{trade.capital}U</td>
+                      <td className="py-3 px-3 text-right font-mono text-slate-300">{formatCapital(trade.capital)}U</td>
                       <td className={`py-3 px-3 text-right font-bold font-mono ${parseFloat(trade.pnl) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {parseFloat(trade.pnl) >= 0 ? '+' : ''}{parseFloat(trade.pnl).toFixed(2)}U
+                        {formatPnl(trade.pnl)}U
                       </td>
                       <td className={`py-3 px-3 text-right font-bold font-mono ${roi >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {roi >= 0 ? '+' : ''}{roi.toFixed(2)}%
