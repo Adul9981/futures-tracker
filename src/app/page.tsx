@@ -362,7 +362,7 @@ export default function Home() {
                       borderRadius: '8px',
                       fontSize: '12px'
                     }}
-                    formatter={(value: number) => [`${value.toFixed(2)}U`, '累计盈亏']}
+                    formatter={(value) => [`${Number(value).toFixed(2)}U`, '累计盈亏']}
                     labelStyle={{ color: '#94a3b8' }}
                   />
                   <Area 
