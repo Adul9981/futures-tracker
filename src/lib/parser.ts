@@ -36,18 +36,19 @@ export function parseTrade(input: string): ParsedTrade | null {
   }
   
   let entryPrice = 0
-  const entryMatch = text.match(/(?:开仓价?|开(?:多|空)|价格|价)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
+  let stopLoss = 0
+  let takeProfit = 0
+  
+  const entryMatch = text.match(/(?:开仓价?|开(?:多|空)|价格|价|开仓)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
   if (entryMatch) {
     entryPrice = parseFloat(entryMatch[1])
   }
   
-  let stopLoss = 0
   const slMatch = text.match(/(?:止损|sl)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
   if (slMatch) {
     stopLoss = parseFloat(slMatch[1])
   }
   
-  let takeProfit = 0
   const tpMatch = text.match(/(?:止盈|tp)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
   if (tpMatch) {
     takeProfit = parseFloat(tpMatch[1])
@@ -55,7 +56,7 @@ export function parseTrade(input: string): ParsedTrade | null {
   
   const allNumbers = text.match(/(\d+(?:\.\d+)?)/g) || []
   
-  if (entryPrice === 0) {
+  if (entryPrice === 0 && allNumbers.length > 0) {
     const symbolIndex = text.indexOf(symbol.toLowerCase())
     const afterSymbol = text.slice(symbolIndex + symbol.length).replace(/[^\d.]/g, ' ')
     const numMatch = afterSymbol.trim().match(/^(\d+(?:\.\d+)?)/)
@@ -64,7 +65,7 @@ export function parseTrade(input: string): ParsedTrade | null {
     }
   }
   
-  const usedPrices = [entryPrice]
+  const usedPrices: number[] = entryPrice > 0 ? [entryPrice] : []
   
   if (stopLoss === 0) {
     const remaining = allNumbers.filter(n => !usedPrices.includes(parseFloat(n)))
@@ -83,7 +84,34 @@ export function parseTrade(input: string): ParsedTrade | null {
   
   if (entryPrice === 0) return null
   
-  const result = text.includes('止盈') || text.includes('tp') || text.includes('已止盈') ? 'win' : 'loss'
+  if (stopLoss === 0 && takeProfit > 0) {
+    if (direction === 'long') {
+      stopLoss = Math.round(entryPrice * 0.98)
+    } else {
+      stopLoss = Math.round(entryPrice * 1.02)
+    }
+  }
+  
+  if (takeProfit === 0 && stopLoss > 0) {
+    if (direction === 'long') {
+      takeProfit = Math.round(entryPrice * 1.02)
+    } else {
+      takeProfit = Math.round(entryPrice * 0.98)
+    }
+  }
+  
+  if (stopLoss === 0 && takeProfit === 0) {
+    if (direction === 'long') {
+      takeProfit = Math.round(entryPrice * 1.02)
+      stopLoss = Math.round(entryPrice * 0.98)
+    } else {
+      takeProfit = Math.round(entryPrice * 0.98)
+      stopLoss = Math.round(entryPrice * 1.02)
+    }
+  }
+  
+  const result = text.includes('止盈') || text.includes('tp') || text.includes('已止盈') || text.includes('盈利') ? 'win' : 
+                 text.includes('止损') || text.includes('sl') || text.includes('亏损') || text.includes('爆仓') ? 'loss' : 'win'
   
   const exitPrice = result === 'win' ? takeProfit : stopLoss
   const pnl = calculatePnl(direction, entryPrice, exitPrice, capital, leverage)
@@ -91,9 +119,9 @@ export function parseTrade(input: string): ParsedTrade | null {
   return {
     symbol,
     direction,
-    entryPrice,
-    stopLoss,
-    takeProfit,
+    entryPrice: Math.round(entryPrice),
+    stopLoss: Math.round(stopLoss),
+    takeProfit: Math.round(takeProfit),
     leverage,
     capital,
     result,
