@@ -19,7 +19,9 @@ export function parseTrade(input: string): ParsedTrade | null {
     symbol = symbolMatch[1].toUpperCase()
   }
   
-  if (!symbol) return null
+  if (!symbol) {
+    symbol = 'ETH'
+  }
   
   const direction = text.includes('空') ? 'short' : 'long'
   
@@ -30,7 +32,9 @@ export function parseTrade(input: string): ParsedTrade | null {
   }
   
   let capital = 10
-  const capitalMatch = text.match(/(?:本金|保证金)\s*[：:]*\s*(\d+(?:\.\d+)?)/i) || text.match(/(\d+(?:\.\d+)?)\s*(?:u|usdt)/i)
+  const capitalMatch = text.match(/(?:本金|保证金|美金|美元)\s*[：:]*\s*(\d+(?:\.\d+)?)/i) || 
+                       text.match(/(\d+(?:\.\d+)?)\s*(?:u|usdt|usd)/i) ||
+                       text.match(/(\d+(?:\.\d+)?)\s*(?:刀|dollar)/i)
   if (capitalMatch) {
     capital = parseFloat(capitalMatch[1])
   }
@@ -39,7 +43,7 @@ export function parseTrade(input: string): ParsedTrade | null {
   let stopLoss = 0
   let takeProfit = 0
   
-  const entryMatch = text.match(/(?:开仓价?|开(?:多|空)|价格|价|开仓)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
+  const entryMatch = text.match(/(?:开仓价?|开(?:多|空)|价格|价|开仓|开)\s*[：:]*\s*(\d+(?:\.\d+)?)/i)
   if (entryMatch) {
     entryPrice = parseFloat(entryMatch[1])
   }
@@ -57,11 +61,25 @@ export function parseTrade(input: string): ParsedTrade | null {
   const allNumbers = text.match(/(\d+(?:\.\d+)?)/g) || []
   
   if (entryPrice === 0 && allNumbers.length > 0) {
-    const symbolIndex = text.indexOf(symbol.toLowerCase())
-    const afterSymbol = text.slice(symbolIndex + symbol.length).replace(/[^\d.]/g, ' ')
-    const numMatch = afterSymbol.trim().match(/^(\d+(?:\.\d+)?)/)
-    if (numMatch) {
-      entryPrice = parseFloat(numMatch[1])
+    if (symbol && symbol.length < text.length) {
+      const symbolIndex = text.indexOf(symbol.toLowerCase())
+      if (symbolIndex >= 0) {
+        const afterSymbol = text.slice(symbolIndex + symbol.length).replace(/[^\d.]/g, ' ')
+        const numMatch = afterSymbol.trim().match(/^(\d+(?:\.\d+)?)/)
+        if (numMatch) {
+          entryPrice = parseFloat(numMatch[1])
+        }
+      }
+    }
+  }
+  
+  if (entryPrice === 0 && allNumbers.length > 0) {
+    for (const num of allNumbers) {
+      const numVal = parseFloat(num)
+      if (numVal > 100) {
+        entryPrice = numVal
+        break
+      }
     }
   }
   
@@ -69,16 +87,24 @@ export function parseTrade(input: string): ParsedTrade | null {
   
   if (stopLoss === 0) {
     const remaining = allNumbers.filter(n => !usedPrices.includes(parseFloat(n)))
-    if (remaining.length > 0) {
-      stopLoss = parseFloat(remaining[0])
-      usedPrices.push(stopLoss)
+    for (const num of remaining) {
+      const numVal = parseFloat(num)
+      if (numVal > 100) {
+        stopLoss = numVal
+        usedPrices.push(stopLoss)
+        break
+      }
     }
   }
   
   if (takeProfit === 0) {
     const remaining = allNumbers.filter(n => !usedPrices.includes(parseFloat(n)))
-    if (remaining.length > 0) {
-      takeProfit = parseFloat(remaining[0])
+    for (const num of remaining) {
+      const numVal = parseFloat(num)
+      if (numVal > 100) {
+        takeProfit = numVal
+        break
+      }
     }
   }
   
@@ -110,7 +136,7 @@ export function parseTrade(input: string): ParsedTrade | null {
     }
   }
   
-  const result = text.includes('止盈') || text.includes('tp') || text.includes('已止盈') || text.includes('盈利') ? 'win' : 
+  const result = text.includes('止盈') || text.includes('tp') || text.includes('已止盈') || text.includes('盈利') || text.includes('平仓') || text.includes('已平仓') ? 'win' : 
                  text.includes('止损') || text.includes('sl') || text.includes('亏损') || text.includes('爆仓') ? 'loss' : 'win'
   
   const exitPrice = result === 'win' ? takeProfit : stopLoss
