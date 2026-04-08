@@ -71,6 +71,8 @@ export default function Home() {
   const [symbolFilter, setSymbolFilter] = useState('all')
   const [refreshKey, setRefreshKey] = useState(0)
   const [showPreview, setShowPreview] = useState(false)
+  const [inputHistory, setInputHistory] = useState<string[]>([])
+  const [showHistory, setShowHistory] = useState(false)
   const [previewData, setPreviewData] = useState<{
     symbol: string
     direction: 'long' | 'short'
@@ -101,6 +103,12 @@ export default function Home() {
 
   useEffect(() => {
     fetchData()
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('tradeInputHistory')
+      if (saved) {
+        setInputHistory(JSON.parse(saved))
+      }
+    }
   }, [refreshKey, period, symbolFilter])
 
   const handlePreview = () => {
@@ -149,6 +157,13 @@ export default function Home() {
         setMessage({ type: 'success', text: '交易记录已保存' })
         setInput('')
         setRefreshKey(k => k + 1)
+        setInputHistory(prev => {
+          const newHistory = [input, ...prev.filter(h => h !== input)].slice(0, 10)
+          if (typeof window !== 'undefined') {
+            localStorage.setItem('tradeInputHistory', JSON.stringify(newHistory))
+          }
+          return newHistory
+        })
       }
     } catch {
       setMessage({ type: 'error', text: '提交失败，请重试' })
@@ -308,108 +323,27 @@ export default function Home() {
           )}
         </form>
 
-        {showPreview && previewData && (
-          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <span className="text-yellow-400">👁️</span> 确认交易信息
-              </h3>
-              
-              <div className="space-y-3 mb-6">
-                <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                  <span className="text-slate-400">币种</span>
-                  <input
-                    type="text"
-                    value={previewData.symbol}
-                    onChange={(e) => setPreviewData({...previewData, symbol: e.target.value})}
-                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
-                  />
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                  <span className="text-slate-400">方向</span>
-                  <select
-                    value={previewData.direction}
-                    onChange={(e) => setPreviewData({...previewData, direction: e.target.value as 'long' | 'short'})}
-                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right"
+        {inputHistory.length > 0 && (
+          <div className="mb-6">
+            <button
+              onClick={() => setShowHistory(!showHistory)}
+              className="text-sm text-slate-500 hover:text-slate-300 flex items-center gap-1"
+            >
+              <span>📜</span> 历史输入 ({inputHistory.length})
+            </button>
+            {showHistory && (
+              <div className="mt-2 flex flex-wrap gap-2">
+                {inputHistory.map((h, i) => (
+                  <button
+                    key={i}
+                    onClick={() => setInput(h)}
+                    className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-300 px-3 py-1.5 rounded-lg border border-slate-700 truncate max-w-xs"
                   >
-                    <option value="long">多</option>
-                    <option value="short">空</option>
-                  </select>
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                  <span className="text-slate-400">开仓价</span>
-                  <input
-                    type="number"
-                    value={previewData.entryPrice}
-                    onChange={(e) => setPreviewData({...previewData, entryPrice: e.target.value})}
-                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
-                  />
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                  <span className="text-slate-400">止盈</span>
-                  <input
-                    type="number"
-                    value={previewData.takeProfit}
-                    onChange={(e) => setPreviewData({...previewData, takeProfit: e.target.value})}
-                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
-                  />
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                  <span className="text-slate-400">止损</span>
-                  <input
-                    type="number"
-                    value={previewData.stopLoss}
-                    onChange={(e) => setPreviewData({...previewData, stopLoss: e.target.value})}
-                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
-                  />
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                  <span className="text-slate-400">杠杆</span>
-                  <input
-                    type="number"
-                    value={previewData.leverage}
-                    onChange={(e) => setPreviewData({...previewData, leverage: e.target.value})}
-                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
-                  />
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                  <span className="text-slate-400">本金</span>
-                  <input
-                    type="number"
-                    value={previewData.capital}
-                    onChange={(e) => setPreviewData({...previewData, capital: e.target.value})}
-                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
-                  />
-                </div>
-                <div className="flex justify-between items-center py-2 border-b border-slate-800">
-                  <span className="text-slate-400">结果</span>
-                  <select
-                    value={previewData.result}
-                    onChange={(e) => setPreviewData({...previewData, result: e.target.value as 'win' | 'loss'})}
-                    className={`bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right ${previewData.result === 'win' ? 'text-emerald-400' : 'text-rose-400'}`}
-                  >
-                    <option value="win">盈利</option>
-                    <option value="loss">亏损</option>
-                  </select>
-                </div>
+                    {h}
+                  </button>
+                ))}
               </div>
-              
-              <div className="flex gap-3">
-                <button
-                  onClick={handleCancelPreview}
-                  className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-medium transition-colors"
-                >
-                  取消
-                </button>
-                <button
-                  onClick={handleConfirmSave}
-                  disabled={loading}
-                  className="flex-1 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-medium transition-colors disabled:opacity-50"
-                >
-                  {loading ? '保存中...' : '确认保存'}
-                </button>
-              </div>
-            </div>
+            )}
           </div>
         )}
 
