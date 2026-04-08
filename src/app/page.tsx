@@ -73,6 +73,17 @@ export default function Home() {
   const [showPreview, setShowPreview] = useState(false)
   const [inputHistory, setInputHistory] = useState<string[]>([])
   const [showHistory, setShowHistory] = useState(false)
+  const [isBatchMode, setIsBatchMode] = useState(false)
+  const [batchPreview, setBatchPreview] = useState<{
+    symbol: string
+    direction: 'long' | 'short'
+    entryPrice: string
+    stopLoss: string
+    takeProfit: string
+    leverage: string
+    capital: string
+    result: 'win' | 'loss'
+  }[]>([])
   const [previewData, setPreviewData] = useState<{
     symbol: string
     direction: 'long' | 'short'
@@ -114,7 +125,28 @@ export default function Home() {
   const handlePreview = () => {
     if (!input.trim()) return
     
-    const { parseTrade } = require('@/lib/parser')
+    const { parseTrade, parseMultipleTrades } = require('@/lib/parser')
+    
+    if (isBatchMode) {
+      const parsed = parseMultipleTrades(input)
+      if (parsed.length > 0) {
+        setBatchPreview(parsed.map(p => ({
+          symbol: p.symbol,
+          direction: p.direction,
+          entryPrice: String(p.entryPrice),
+          stopLoss: String(p.stopLoss),
+          takeProfit: String(p.takeProfit),
+          leverage: String(p.leverage),
+          capital: String(p.capital),
+          result: p.result
+        })))
+        setShowPreview(true)
+      } else {
+        setMessage({ type: 'error', text: '无法解析交易信息，请检查输入格式' })
+      }
+      return
+    }
+    
     const parsed = parseTrade(input)
     
     if (parsed) {
@@ -135,35 +167,49 @@ export default function Home() {
   }
 
   const handleConfirmSave = async () => {
-    if (!previewData) return
-    
     setLoading(true)
     setMessage(null)
     
     try {
-      const text = `${previewData.symbol} ${previewData.entryPrice}${previewData.direction === 'short' ? '空' : '多'} 止损${previewData.stopLoss} 止盈${previewData.takeProfit} ${previewData.leverage}倍 本金${previewData.capital}U ${previewData.result === 'win' ? '止盈' : '止损'}`
-      
-      const res = await fetch('/api/trades', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text })
-      })
-
-      const data = await res.json()
-
-      if (!res.ok) {
-        setMessage({ type: 'error', text: data.error })
-      } else {
-        setMessage({ type: 'success', text: '交易记录已保存' })
+      if (isBatchMode && batchPreview.length > 0) {
+        let successCount = 0
+        for (const p of batchPreview) {
+          const text = `${p.symbol} ${p.entryPrice}${p.direction === 'short' ? '空' : '多'} 止损${p.stopLoss} 止盈${p.takeProfit} ${p.leverage}倍 本金${p.capital}U ${p.result === 'win' ? '止盈' : '止损'}`
+          await fetch('/api/trades', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text })
+          })
+          successCount++
+        }
+        setMessage({ type: 'success', text: `成功保存 ${successCount} 笔交易` })
         setInput('')
         setRefreshKey(k => k + 1)
-        setInputHistory(prev => {
-          const newHistory = [input, ...prev.filter(h => h !== input)].slice(0, 10)
-          if (typeof window !== 'undefined') {
-            localStorage.setItem('tradeInputHistory', JSON.stringify(newHistory))
-          }
-          return newHistory
+      } else if (previewData) {
+        const text = `${previewData.symbol} ${previewData.entryPrice}${previewData.direction === 'short' ? '空' : '多'} 止损${previewData.stopLoss} 止盈${previewData.takeProfit} ${previewData.leverage}倍 本金${previewData.capital}U ${previewData.result === 'win' ? '止盈' : '止损'}`
+        
+        const res = await fetch('/api/trades', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text })
         })
+
+        const data = await res.json()
+
+        if (!res.ok) {
+          setMessage({ type: 'error', text: data.error })
+        } else {
+          setMessage({ type: 'success', text: '交易记录已保存' })
+          setInput('')
+          setRefreshKey(k => k + 1)
+          setInputHistory(prev => {
+            const newHistory = [input, ...prev.filter(h => h !== input)].slice(0, 10)
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('tradeInputHistory', JSON.stringify(newHistory))
+            }
+            return newHistory
+          })
+        }
       }
     } catch {
       setMessage({ type: 'error', text: '提交失败，请重试' })
@@ -280,19 +326,28 @@ export default function Home() {
           <div className="relative">
             <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-pink-500/20 rounded-2xl blur-xl"></div>
             <div className="relative bg-slate-900/80 backdrop-blur-xl border border-slate-800 rounded-2xl p-5">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="flex gap-1.5">
-                  <div className="w-3 h-3 rounded-full bg-red-500/80"/>
-                  <div className="w-3 h-3 rounded-full bg-yellow-500/80"/>
-                  <div className="w-3 h-3 rounded-full bg-green-500/80"/>
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex gap-1.5">
+                    <div className="w-3 h-3 rounded-full bg-red-500/80"/>
+                    <div className="w-3 h-3 rounded-full bg-yellow-500/80"/>
+                    <div className="w-3 h-3 rounded-full bg-green-500/80"/>
+                  </div>
+                  <span className="text-slate-500 text-sm font-medium">输入交易记录</span>
                 </div>
-                <span className="text-slate-500 text-sm font-medium">输入交易记录</span>
+                <button
+                  type="button"
+                  onClick={() => { setIsBatchMode(!isBatchMode); setInput('') }}
+                  className={`text-xs px-3 py-1 rounded-lg transition-colors ${isBatchMode ? 'bg-violet-500/20 text-violet-400 border border-violet-500/30' : 'bg-slate-800 text-slate-500'}`}
+                >
+                  {isBatchMode ? '📚 批量模式' : '📝 单笔模式'}
+                </button>
               </div>
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="输入交易记录，如：ETH 2075空 2085止损 2035止盈 90倍 本金15U 止盈"
-                className="w-full h-24 bg-slate-950/50 rounded-xl p-3 text-white placeholder-slate-600 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 border border-slate-800 font-mono text-sm"
+                placeholder={isBatchMode ? "批量输入，每行一笔：\nETH 2075空 止损2085 止盈2035 90倍 本金15U 止盈\nBTC 95000多 止损94000 止盈96000 50倍 本金20U 止盈" : "输入交易记录，如：ETH 2075空 2085止损 2035止盈 90倍 本金15U 止盈"}
+                className={`w-full bg-slate-950/50 rounded-xl p-3 text-white placeholder-slate-600 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500/30 border border-slate-800 font-mono text-sm ${isBatchMode ? 'h-40' : 'h-24'}`}
               />
               <div className="flex justify-between items-center mt-3">
                 <span className="text-slate-600 text-xs">支持多种格式</span>
@@ -322,6 +377,88 @@ export default function Home() {
             </div>
           )}
         </form>
+
+        {showPreview && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-lg max-h-[80vh] overflow-y-auto">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span className="text-yellow-400">👁️</span>
+                {isBatchMode ? `确认 ${batchPreview.length} 笔交易` : '确认交易信息'}
+              </h3>
+              
+              {isBatchMode ? (
+                <div className="space-y-3 mb-6 max-h-64 overflow-y-auto">
+                  {batchPreview.map((p, i) => (
+                    <div key={i} className="bg-slate-800/50 rounded-lg p-3 text-sm">
+                      <div className="flex justify-between mb-1">
+                        <span className="font-semibold">{p.symbol}</span>
+                        <span className={p.direction === 'short' ? 'text-emerald-400' : 'text-rose-400'}>
+                          {p.direction === 'short' ? '空' : '多'}
+                        </span>
+                      </div>
+                      <div className="text-slate-400 text-xs flex justify-between">
+                        <span>开仓: {p.entryPrice} | 止盈: {p.takeProfit} | 止损: {p.stopLoss}</span>
+                        <span className={p.result === 'win' ? 'text-emerald-400' : 'text-rose-400'}>
+                          {p.result === 'win' ? '盈利' : '亏损'}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : previewData && (
+                <div className="space-y-3 mb-6">
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="text-slate-400">币种</span>
+                    <input type="text" value={previewData.symbol} onChange={(e) => setPreviewData({...previewData, symbol: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24" />
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="text-slate-400">方向</span>
+                    <select value={previewData.direction} onChange={(e) => setPreviewData({...previewData, direction: e.target.value as 'long' | 'short'})} className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right">
+                      <option value="long">多</option>
+                      <option value="short">空</option>
+                    </select>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="text-slate-400">开仓价</span>
+                    <input type="number" value={previewData.entryPrice} onChange={(e) => setPreviewData({...previewData, entryPrice: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24" />
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="text-slate-400">止盈</span>
+                    <input type="number" value={previewData.takeProfit} onChange={(e) => setPreviewData({...previewData, takeProfit: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24" />
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="text-slate-400">止损</span>
+                    <input type="number" value={previewData.stopLoss} onChange={(e) => setPreviewData({...previewData, stopLoss: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24" />
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="text-slate-400">杠杆</span>
+                    <input type="number" value={previewData.leverage} onChange={(e) => setPreviewData({...previewData, leverage: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24" />
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="text-slate-400">本金</span>
+                    <input type="number" value={previewData.capital} onChange={(e) => setPreviewData({...previewData, capital: e.target.value})} className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24" />
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                    <span className="text-slate-400">结果</span>
+                    <select value={previewData.result} onChange={(e) => setPreviewData({...previewData, result: e.target.value as 'win' | 'loss'})} className={`bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right ${previewData.result === 'win' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                      <option value="win">盈利</option>
+                      <option value="loss">亏损</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+              
+              <div className="flex gap-3">
+                <button onClick={() => { setShowPreview(false); setPreviewData(null); setBatchPreview([]) }} className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-medium transition-colors">
+                  取消
+                </button>
+                <button onClick={handleConfirmSave} disabled={loading} className="flex-1 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-medium transition-colors disabled:opacity-50">
+                  {loading ? '保存中...' : '确认保存'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {inputHistory.length > 0 && (
           <div className="mb-6">

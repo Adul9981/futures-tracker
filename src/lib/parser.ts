@@ -177,3 +177,17 @@ function calculatePnl(
   
   return Math.round(pnl * 100) / 100
 }
+
+export function parseMultipleTrades(input: string): ParsedTrade[] {
+  const lines = input.split(/[\n,，]/).filter(line => line.trim())
+  const results: ParsedTrade[] = []
+  
+  for (const line of lines) {
+    const parsed = parseTrade(line.trim())
+    if (parsed) {
+      results.push(parsed)
+    }
+  }
+  
+  return results
+}
