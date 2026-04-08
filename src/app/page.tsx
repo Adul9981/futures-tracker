@@ -130,7 +130,7 @@ export default function Home() {
     if (isBatchMode) {
       const parsed = parseMultipleTrades(input)
       if (parsed.length > 0) {
-        setBatchPreview(parsed.map(p => ({
+        setBatchPreview(parsed.map((p: any) => ({
           symbol: p.symbol,
           direction: p.direction,
           entryPrice: String(p.entryPrice),
