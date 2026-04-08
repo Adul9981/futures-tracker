@@ -136,8 +136,12 @@ export function parseTrade(input: string): ParsedTrade | null {
     }
   }
   
-  const result = text.includes('止盈') || text.includes('tp') || text.includes('已止盈') || text.includes('盈利') || text.includes('平仓') || text.includes('已平仓') ? 'win' : 
-                 text.includes('止损') || text.includes('sl') || text.includes('亏损') || text.includes('爆仓') ? 'loss' : 'win'
+  const isWin = text.includes('止盈平仓') || text.includes('止盈') || text.includes('盈利') || 
+               text.includes('盈利平仓') || text.includes('tp平仓') || text.includes('tp')
+  const isLoss = text.includes('止损平仓') || text.includes('止损') || text.includes('亏损') || 
+                text.includes('亏损平仓') || text.includes('爆仓') || text.includes('sl平仓') || text.includes('sl')
+  
+  const result = isLoss ? 'loss' : (isWin ? 'win' : 'win')
   
   const exitPrice = result === 'win' ? takeProfit : stopLoss
   const pnl = calculatePnl(direction, entryPrice, exitPrice, capital, leverage)
