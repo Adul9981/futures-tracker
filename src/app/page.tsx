@@ -70,6 +70,17 @@ export default function Home() {
   const [period, setPeriod] = useState('all')
   const [symbolFilter, setSymbolFilter] = useState('all')
   const [refreshKey, setRefreshKey] = useState(0)
+  const [showPreview, setShowPreview] = useState(false)
+  const [previewData, setPreviewData] = useState<{
+    symbol: string
+    direction: 'long' | 'short'
+    entryPrice: string
+    stopLoss: string
+    takeProfit: string
+    leverage: string
+    capital: string
+    result: 'win' | 'loss'
+  } | null>(null)
 
   const fetchData = async () => {
     try {
@@ -91,6 +102,67 @@ export default function Home() {
   useEffect(() => {
     fetchData()
   }, [refreshKey, period, symbolFilter])
+
+  const handlePreview = () => {
+    if (!input.trim()) return
+    
+    const { parseTrade } = require('@/lib/parser')
+    const parsed = parseTrade(input)
+    
+    if (parsed) {
+      setPreviewData({
+        symbol: parsed.symbol,
+        direction: parsed.direction,
+        entryPrice: String(parsed.entryPrice),
+        stopLoss: String(parsed.stopLoss),
+        takeProfit: String(parsed.takeProfit),
+        leverage: String(parsed.leverage),
+        capital: String(parsed.capital),
+        result: parsed.result
+      })
+      setShowPreview(true)
+    } else {
+      setMessage({ type: 'error', text: '无法解析交易信息，请检查输入格式' })
+    }
+  }
+
+  const handleConfirmSave = async () => {
+    if (!previewData) return
+    
+    setLoading(true)
+    setMessage(null)
+    
+    try {
+      const text = `${previewData.symbol} ${previewData.entryPrice}${previewData.direction === 'short' ? '空' : '多'} 止损${previewData.stopLoss} 止盈${previewData.takeProfit} ${previewData.leverage}倍 本金${previewData.capital}U ${previewData.result === 'win' ? '止盈' : '止损'}`
+      
+      const res = await fetch('/api/trades', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text })
+      })
+
+      const data = await res.json()
+
+      if (!res.ok) {
+        setMessage({ type: 'error', text: data.error })
+      } else {
+        setMessage({ type: 'success', text: '交易记录已保存' })
+        setInput('')
+        setRefreshKey(k => k + 1)
+      }
+    } catch {
+      setMessage({ type: 'error', text: '提交失败，请重试' })
+    } finally {
+      setLoading(false)
+      setShowPreview(false)
+      setPreviewData(null)
+    }
+  }
+
+  const handleCancelPreview = () => {
+    setShowPreview(false)
+    setPreviewData(null)
+  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -209,13 +281,23 @@ export default function Home() {
               />
               <div className="flex justify-between items-center mt-3">
                 <span className="text-slate-600 text-xs">支持多种格式</span>
-                <button
-                  type="submit"
-                  disabled={loading}
-                  className="px-6 py-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 rounded-xl font-medium transition-all disabled:opacity-50 text-sm"
-                >
-                  {loading ? '提交中...' : '添加记录'}
-                </button>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={handlePreview}
+                    disabled={!input.trim() || loading}
+                    className="px-4 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-medium transition-all disabled:opacity-50 text-sm"
+                  >
+                    预览
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="px-6 py-2 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 hover:from-blue-600 hover:via-purple-600 hover:to-pink-600 rounded-xl font-medium transition-all disabled:opacity-50 text-sm"
+                  >
+                    {loading ? '提交中...' : '直接添加'}
+                  </button>
+                </div>
               </div>
             </div>
           </div>
@@ -225,6 +307,111 @@ export default function Home() {
             </div>
           )}
         </form>
+
+        {showPreview && previewData && (
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <span className="text-yellow-400">👁️</span> 确认交易信息
+              </h3>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                  <span className="text-slate-400">币种</span>
+                  <input
+                    type="text"
+                    value={previewData.symbol}
+                    onChange={(e) => setPreviewData({...previewData, symbol: e.target.value})}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
+                  />
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                  <span className="text-slate-400">方向</span>
+                  <select
+                    value={previewData.direction}
+                    onChange={(e) => setPreviewData({...previewData, direction: e.target.value as 'long' | 'short'})}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right"
+                  >
+                    <option value="long">多</option>
+                    <option value="short">空</option>
+                  </select>
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                  <span className="text-slate-400">开仓价</span>
+                  <input
+                    type="number"
+                    value={previewData.entryPrice}
+                    onChange={(e) => setPreviewData({...previewData, entryPrice: e.target.value})}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
+                  />
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                  <span className="text-slate-400">止盈</span>
+                  <input
+                    type="number"
+                    value={previewData.takeProfit}
+                    onChange={(e) => setPreviewData({...previewData, takeProfit: e.target.value})}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
+                  />
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                  <span className="text-slate-400">止损</span>
+                  <input
+                    type="number"
+                    value={previewData.stopLoss}
+                    onChange={(e) => setPreviewData({...previewData, stopLoss: e.target.value})}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
+                  />
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                  <span className="text-slate-400">杠杆</span>
+                  <input
+                    type="number"
+                    value={previewData.leverage}
+                    onChange={(e) => setPreviewData({...previewData, leverage: e.target.value})}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
+                  />
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                  <span className="text-slate-400">本金</span>
+                  <input
+                    type="number"
+                    value={previewData.capital}
+                    onChange={(e) => setPreviewData({...previewData, capital: e.target.value})}
+                    className="bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right w-24"
+                  />
+                </div>
+                <div className="flex justify-between items-center py-2 border-b border-slate-800">
+                  <span className="text-slate-400">结果</span>
+                  <select
+                    value={previewData.result}
+                    onChange={(e) => setPreviewData({...previewData, result: e.target.value as 'win' | 'loss'})}
+                    className={`bg-slate-800 border border-slate-700 rounded-lg px-3 py-1 text-right ${previewData.result === 'win' ? 'text-emerald-400' : 'text-rose-400'}`}
+                  >
+                    <option value="win">盈利</option>
+                    <option value="loss">亏损</option>
+                  </select>
+                </div>
+              </div>
+              
+              <div className="flex gap-3">
+                <button
+                  onClick={handleCancelPreview}
+                  className="flex-1 py-2 bg-slate-700 hover:bg-slate-600 rounded-xl font-medium transition-colors"
+                >
+                  取消
+                </button>
+                <button
+                  onClick={handleConfirmSave}
+                  disabled={loading}
+                  className="flex-1 py-2 bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 rounded-xl font-medium transition-colors disabled:opacity-50"
+                >
+                  {loading ? '保存中...' : '确认保存'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="flex flex-wrap gap-3 mb-6">
           <select 
