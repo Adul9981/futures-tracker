@@ -24,3 +24,48 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Polymarket page utilities */
+.pm-card {
+  background: #1a1b1e;
+  border: 1px solid #2d2f36;
+  border-radius: 0.75rem;
+  padding: 1rem;
+  transition: border-color 0.15s;
+}
+.pm-card:hover {
+  border-color: #00e8a2;
+}
+
+.pm-btn-trade {
+  display: block;
+  text-align: center;
+  background: #00e8a2;
+  color: #000;
+  font-weight: 600;
+  font-size: 0.8125rem;
+  padding: 0.5rem;
+  border-radius: 0.5rem;
+  transition: background 0.15s;
+  text-decoration: none;
+}
+.pm-btn-trade:hover {
+  background: #00d496;
+}
+
+.pm-empty {
+  color: #64748b;
+  font-size: 0.875rem;
+  padding: 2rem;
+  text-align: center;
+  border: 1px dashed #2d2f36;
+  border-radius: 0.75rem;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
