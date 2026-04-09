@@ -4,6 +4,7 @@ import { CATEGORIES, CategoryConfig } from '@/data/polymarket-categories'
 import HeroSection from '@/components/polymarket/HeroSection'
 import CategoryNav from '@/components/polymarket/CategoryNav'
 import CategorySection from '@/components/polymarket/CategorySection'
+import KnowledgeSection from '@/components/polymarket/KnowledgeSection'
 
 async function fetchCategoryEvents(config: CategoryConfig): Promise<GammaEvent[]> {
   if (config.fetchStrategy === 'tag_slug' && config.tagSlug) {
@@ -57,6 +58,7 @@ export default function PolymarketPage() {
     <div className="min-h-screen bg-[#0d0e12] text-white">
       <div className="max-w-5xl mx-auto px-4 py-8">
         <HeroSection />
+        <KnowledgeSection />
         <CategoryNav />
         <Suspense fallback={<LoadingSkeleton />}>
           <AllCategories />
