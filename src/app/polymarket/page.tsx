@@ -1,16 +1,17 @@
 import { Suspense } from 'react'
-import { fetchEventsByTag, fetchEventsByKeyword, fetchEventBySlug, GammaEvent } from '@/lib/gamma-api'
+import { fetchEventsByTagSlug, fetchEventBySlug, fetchMuskTweetsEvent, GammaEvent } from '@/lib/gamma-api'
 import { CATEGORIES, CategoryConfig } from '@/data/polymarket-categories'
 import HeroSection from '@/components/polymarket/HeroSection'
 import CategoryNav from '@/components/polymarket/CategoryNav'
 import CategorySection from '@/components/polymarket/CategorySection'
 
 async function fetchCategoryEvents(config: CategoryConfig): Promise<GammaEvent[]> {
-  if (config.fetchStrategy === 'tag' && config.tag) {
-    return fetchEventsByTag(config.tag, 6)
+  if (config.fetchStrategy === 'tag_slug' && config.tagSlug) {
+    return fetchEventsByTagSlug(config.tagSlug, 6)
   }
-  if (config.fetchStrategy === 'keyword' && config.keyword) {
-    return fetchEventsByKeyword(config.keyword, 6)
+  if (config.fetchStrategy === 'musk') {
+    const event = await fetchMuskTweetsEvent()
+    return event ? [event] : []
   }
   if (config.fetchStrategy === 'slugs' && config.slugs) {
     const results = await Promise.allSettled(config.slugs.map(fetchEventBySlug))
