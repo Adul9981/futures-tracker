@@ -94,6 +94,9 @@ export default function Home() {
     capital: string
     result: 'win' | 'loss'
   } | null>(null)
+  const [parseErrors, setParseErrors] = useState<{ field: string; message: string }[]>([])
+  const [templates, setTemplates] = useState<string[]>([])
+  const [suggestedTemplate, setSuggestedTemplate] = useState<string | null>(null)
 
   const fetchData = async () => {
     try {
@@ -119,18 +122,29 @@ export default function Home() {
       if (saved) {
         setInputHistory(JSON.parse(saved))
       }
+      const savedTemplates = localStorage.getItem('tradeTemplates')
+      if (savedTemplates) {
+        setTemplates(JSON.parse(savedTemplates))
+      }
     }
   }, [refreshKey, period, symbolFilter])
+
+  const { extractTemplate } = require('@/lib/parser')
 
   const handlePreview = () => {
     if (!input.trim()) return
     
-    const { parseTrade, parseMultipleTrades } = require('@/lib/parser')
+    const { parseTradeWithValidation, parseMultipleTrades, extractTemplate } = require('@/lib/parser')
+    
+    const template = extractTemplate(input)
+    if (template.length > 5) {
+      setSuggestedTemplate(template)
+    }
     
     if (isBatchMode) {
-      const parsed = parseMultipleTrades(input)
-      if (parsed.length > 0) {
-        setBatchPreview(parsed.map((p: any) => ({
+      const result = parseMultipleTrades(input)
+      if (result.success.length > 0) {
+        setBatchPreview(result.success.map((p: any) => ({
           symbol: p.symbol,
           direction: p.direction,
           entryPrice: String(p.entryPrice),
@@ -140,29 +154,34 @@ export default function Home() {
           capital: String(p.capital),
           result: p.result
         })))
+        setParseErrors(result.failed.map(f => ({ field: '', message: `${f.text}: ${f.error}` })))
         setShowPreview(true)
-      } else {
-        setMessage({ type: 'error', text: '无法解析交易信息，请检查输入格式' })
+      }
+      if (result.failed.length > 0 && result.success.length === 0) {
+        setMessage({ type: 'error', text: result.failed[0].error })
+        setParseErrors(result.failed.map(f => ({ field: '', message: `${f.text}: ${f.error}` })))
       }
       return
     }
     
-    const parsed = parseTrade(input)
+    const result = parseTradeWithValidation(input)
     
-    if (parsed) {
+    if (result.success && result.data) {
       setPreviewData({
-        symbol: parsed.symbol,
-        direction: parsed.direction,
-        entryPrice: String(parsed.entryPrice),
-        stopLoss: String(parsed.stopLoss),
-        takeProfit: String(parsed.takeProfit),
-        leverage: String(parsed.leverage),
-        capital: String(parsed.capital),
-        result: parsed.result
+        symbol: result.data.symbol,
+        direction: result.data.direction,
+        entryPrice: String(result.data.entryPrice),
+        stopLoss: String(result.data.stopLoss),
+        takeProfit: String(result.data.takeProfit),
+        leverage: String(result.data.leverage),
+        capital: String(result.data.capital),
+        result: result.data.result
       })
+      setParseErrors(result.errors || [])
       setShowPreview(true)
     } else {
-      setMessage({ type: 'error', text: '无法解析交易信息，请检查输入格式' })
+      setMessage({ type: 'error', text: result.errors?.[0]?.message || '无法解析交易信息' })
+      setParseErrors(result.errors || [])
     }
   }
 
@@ -209,6 +228,16 @@ export default function Home() {
             }
             return newHistory
           })
+          if (suggestedTemplate) {
+            setTemplates(prev => {
+              const newTemplates = [suggestedTemplate, ...prev.filter(t => t !== suggestedTemplate)].slice(0, 5)
+              if (typeof window !== 'undefined') {
+                localStorage.setItem('tradeTemplates', JSON.stringify(newTemplates))
+              }
+              return newTemplates
+            })
+            setSuggestedTemplate(null)
+          }
         }
       }
     } catch {
@@ -481,6 +510,32 @@ export default function Home() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {parseErrors.length > 0 && !showPreview && (
+          <div className="mb-6 bg-amber-500/10 border border-amber-500/20 rounded-xl p-4">
+            <div className="text-amber-400 text-sm font-medium mb-2">⚠️ 解析提示</div>
+            {parseErrors.map((err, i) => (
+              <div key={i} className="text-amber-300/80 text-xs mb-1">{err.message}</div>
+            ))}
+          </div>
+        )}
+
+        {templates.length > 0 && (
+          <div className="mb-6">
+            <div className="text-sm text-slate-500 mb-2">📋 常用格式</div>
+            <div className="flex flex-wrap gap-2">
+              {templates.map((t, i) => (
+                <button
+                  key={i}
+                  onClick={() => setMessage({ type: 'success', text: `常用格式 ${i + 1} 已记忆` })}
+                  className="text-xs bg-violet-500/10 border border-violet-500/20 text-violet-400 px-3 py-1.5 rounded-lg hover:bg-violet-500/20"
+                >
+                  格式 {i + 1}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
