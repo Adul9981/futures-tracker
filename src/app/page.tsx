@@ -154,12 +154,12 @@ export default function Home() {
           capital: String(p.capital),
           result: p.result
         })))
-        setParseErrors(result.failed.map(f => ({ field: '', message: `${f.text}: ${f.error}` })))
+        setParseErrors(result.failed.map((f: any) => ({ field: '', message: `${f.text}: ${f.error}` })))
         setShowPreview(true)
       }
       if (result.failed.length > 0 && result.success.length === 0) {
         setMessage({ type: 'error', text: result.failed[0].error })
-        setParseErrors(result.failed.map(f => ({ field: '', message: `${f.text}: ${f.error}` })))
+        setParseErrors(result.failed.map((f: any) => ({ field: '', message: `${f.text}: ${f.error}` })))
       }
       return
     }
