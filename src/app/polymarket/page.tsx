@@ -1,5 +1,5 @@
 import { Suspense } from 'react'
-import { fetchEventsByTagSlug, fetchEventBySlug, fetchMuskTweetsEvent, GammaEvent } from '@/lib/gamma-api'
+import { fetchEventsByTagSlug, fetchEventsByMultipleTagSlugs, fetchEventBySlug, fetchMuskTweetsEvent, GammaEvent } from '@/lib/gamma-api'
 import { CATEGORIES, CategoryConfig } from '@/data/polymarket-categories'
 import HeroSection from '@/components/polymarket/HeroSection'
 import CategoryNav from '@/components/polymarket/CategoryNav'
@@ -8,6 +8,9 @@ import CategorySection from '@/components/polymarket/CategorySection'
 async function fetchCategoryEvents(config: CategoryConfig): Promise<GammaEvent[]> {
   if (config.fetchStrategy === 'tag_slug' && config.tagSlug) {
     return fetchEventsByTagSlug(config.tagSlug, 6)
+  }
+  if (config.fetchStrategy === 'multi_tag_slug' && config.tagSlugs) {
+    return fetchEventsByMultipleTagSlugs(config.tagSlugs)
   }
   if (config.fetchStrategy === 'musk') {
     const event = await fetchMuskTweetsEvent()

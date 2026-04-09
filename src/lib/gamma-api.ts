@@ -40,14 +40,47 @@ export interface GammaEvent {
 }
 
 /** 通过 tag_slug 查询活跃事件（唯一有效的 tag 过滤方式）*/
-export async function fetchEventsByTagSlug(tagSlug: string, limit = 6): Promise<GammaEvent[]> {
+export async function fetchEventsByTagSlug(
+  tagSlug: string,
+  limit = 6,
+  order: 'volume24hr' | 'startDate' = 'volume24hr',
+): Promise<GammaEvent[]> {
   'use cache'
   cacheLife('hours')
 
-  const url = `${GAMMA_API}/events?active=true&closed=false&archived=false&tag_slug=${tagSlug}&limit=${limit}&order=volume24hr&ascending=false`
+  const url = `${GAMMA_API}/events?active=true&closed=false&archived=false&tag_slug=${tagSlug}&limit=${limit}&order=${order}&ascending=false`
   const res = await fetch(url)
   if (!res.ok) return []
   return res.json()
+}
+
+/**
+ * 同时查询多个 tag_slug，合并结果并按 id 去重。
+ * 用于需要混合展示不同子类别的场景（如：5分钟市场 + 每小时市场）。
+ */
+export async function fetchEventsByMultipleTagSlugs(
+  tagSlugs: { slug: string; limit?: number; order?: 'volume24hr' | 'startDate' }[],
+): Promise<GammaEvent[]> {
+  'use cache'
+  cacheLife('hours')
+
+  const results = await Promise.allSettled(
+    tagSlugs.map(({ slug, limit = 4, order = 'volume24hr' }) =>
+      fetchEventsByTagSlug(slug, limit, order)
+    )
+  )
+  const seen = new Set<string>()
+  const merged: GammaEvent[] = []
+  for (const r of results) {
+    if (r.status !== 'fulfilled') continue
+    for (const event of r.value) {
+      if (!seen.has(event.id)) {
+        seen.add(event.id)
+        merged.push(event)
+      }
+    }
+  }
+  return merged
 }
 
 /** 通过精确 slug 查询单个事件 */

@@ -1,3 +1,10 @@
+export interface TagSlugQuery {
+  slug: string
+  limit?: number
+  /** 排序：volume24hr（按交易量）或 startDate（按最新创建，适合5分钟滚动市场）*/
+  order?: 'volume24hr' | 'startDate'
+}
+
 export interface CategoryConfig {
   id: string
   label: string
@@ -5,12 +12,14 @@ export interface CategoryConfig {
   description: string
   tip: string
   /**
-   * tag_slug  → fetchEventsByTagSlug(tagSlug)  — 通过 tag_slug= 参数筛选
-   * slugs     → fetchEventBySlug(slug) x N      — 精确 slug 列表
-   * musk      → fetchMuskTweetsEvent()           — 动态生成周度 slug
+   * tag_slug       → 单个 tag_slug 查询
+   * multi_tag_slug → 多个 tag_slug 合并查询（去重），用于混合展示不同周期
+   * slugs          → 精确 slug 列表
+   * musk           → 动态生成周度 slug
    */
-  fetchStrategy: 'tag_slug' | 'slugs' | 'musk'
+  fetchStrategy: 'tag_slug' | 'multi_tag_slug' | 'slugs' | 'musk'
   tagSlug?: string
+  tagSlugs?: TagSlugQuery[]
   slugs?: string[]
 }
 
@@ -19,10 +28,13 @@ export const CATEGORIES: CategoryConfig[] = [
     id: 'crypto',
     label: '加密货币涨跌',
     icon: '₿',
-    description: 'BTC / ETH 短期价格方向预测（每小时 / 每日），滚动更新',
-    tip: '看盘感觉好直接下注，结算快，适合有加密货币基础的新手',
-    fetchStrategy: 'tag_slug',
-    tagSlug: 'up-or-down',
+    description: 'BTC / ETH 等加密货币涨跌预测，涵盖 5 分钟短线和每小时 / 每日两种周期',
+    tip: '5分钟市场每5分钟滚动更新；每小时/每日市场交易量更大，适合初次体验',
+    fetchStrategy: 'multi_tag_slug',
+    tagSlugs: [
+      { slug: '5m',         limit: 3, order: 'startDate' },   // 最新5分钟市场
+      { slug: 'up-or-down', limit: 4, order: 'volume24hr' },  // 高交易量每小时/每日
+    ],
   },
   {
     id: 'weather',
